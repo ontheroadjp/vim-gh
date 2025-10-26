@@ -10,18 +10,22 @@
 
 " ---- YAML frontmatter parsing (fixed version) ----
 function! gh#ParseYAMLFrontmatter()
-  " Find YAML frontmatter boundaries (--- ... ---
-  let l:start = search('^---$', 'n')
-  if l:start == 0
-    return ['', '', '', '']
-  endif
-  let l:end = search('^---$', 'n', l:start + 1)
-  if l:end == 0
-    return ['', '', '', '']
+  let l:all_lines = getline(1, '$')
+
+  " Find YAML frontmatter boundaries using index() for robustness
+  let l:start_index = index(l:all_lines, '---')
+  if l:start_index == -1
+    return ['', '', '', '', 0]
   endif
 
-  " Read lines within YAML block
-  let l:lines = getline(l:start + 1, l:end - 1)
+  let l:end_index = index(l:all_lines[l:start_index + 1:], '---')
+  if l:end_index == -1
+    return ['', '', '', '', 0]
+  endif
+  let l:end_index += l:start_index + 1
+
+  " Get lines within YAML block
+  let l:lines = l:all_lines[l:start_index + 1 : l:end_index - 1]
   let l:title = ''
   let l:label = ''
   let l:assignee = ''
@@ -30,17 +34,18 @@ function! gh#ParseYAMLFrontmatter()
   " Parse each line individually
   for l:line in l:lines
     if l:line =~? '^title:\s*'
-      let l:title = substitute(l:line, '^title:\s*', '', '')
+      let l:title = trim(substitute(l:line, '^title:\s*', '', ''))
     elseif l:line =~? '^label:\s*'
-      let l:label = substitute(l:line, '^label:\s*', '', '')
+      let l:label = trim(substitute(l:line, '^label:\s*', '', ''))
     elseif l:line =~? '^assignee:\s*'
-      let l:assignee = substitute(l:line, '^assignee:\s*', '', '')
+      let l:assignee = trim(substitute(l:line, '^assignee:\s*', '', ''))
     elseif l:line =~? '^milestone:\s*'
-      let l:milestone = substitute(l:line, '^milestone:\s*', '', '')
+      let l:milestone = trim(substitute(l:line, '^milestone:\s*', '', ''))
     endif
   endfor
 
-  return [l:title, l:label, l:assignee, l:milestone]
+  " The end line number is end_index + 1 (since it's 0-based index)
+  return [l:title, l:label, l:assignee, l:milestone, l:end_index + 1]
 endfunction
 
 " =========================================
@@ -61,8 +66,8 @@ function! gh#EnsureLabelExists(label)
   let l:found = 0
   for l:item in g:gh_labels
     if l:item.name ==# a:label
-      let l:cmd = 'gh label create ' . shellescape(l:item.name) . \
-                  \ ' --color ' . shellescape(l:item.color) . \
+      let l:cmd = 'gh label create ' . shellescape(l:item.name) .
+                  \ ' --color ' . shellescape(l:item.color) .
                   \ ' --description ' . shellescape(l:item.description)
       call system(l:cmd)
       let l:found = 1
@@ -80,44 +85,18 @@ endfunction
 " Function: SendBufferToGH
 " ===========================================================================
 function! gh#SendBufferToGH()
-  let l:lines = getline(1, '$')
+  let [l:title, l:label, l:assignee, l:milestone, l:end_line] = gh#ParseYAMLFrontmatter()
 
-  " YAML front matter
-  let l:start = index(l:lines, '---')
-  if l:start == -1
-    echoerr "YAML front matter not found"
+  if l:end_line == 0
+    echoerr "YAML front matter not found or is incomplete."
     return
   endif
-  let l:end = index(l:lines[l:start+1:], '---')
-  if l:end == -1
-    echoerr "YAML front matter end not found"
-    return
-  endif
-  let l:end = l:start + l:end + 1
-
-  " Parse YAML fields
-  let l:title = ''
-  let l:label = ''
-  let l:assignee = ''
-  let l:milestone = ''
-
-  for l:line in l:lines[l:start+1 : l:end-1]
-    if l:line =~ '^title:'
-      let l:title = trim(substitute(l:line, '^title:\s*', '', ''))
-    elseif l:line =~ '^label:'
-      let l:label = trim(substitute(l:line, '^label:\s*', '', ''))
-    elseif l:line =~ '^assignee:'
-      let l:assignee = trim(substitute(l:line, '^assignee:\s*', '', ''))
-    elseif l:line =~ '^milestone:'
-      let l:milestone = trim(substitute(l:line, '^milestone:\s*', '', ''))
-    endif
-  endfor
 
   " Ensure label exists or create it
   call gh#EnsureLabelExists(l:label)
 
   " Body
-  let l:body_lines = l:lines[l:end+1 :]
+  let l:body_lines = getline(l:end_line + 1, '$')
   let l:tmpfile = tempname() . '.md'
   call writefile(l:body_lines, l:tmpfile)
 
