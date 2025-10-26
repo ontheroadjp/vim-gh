@@ -1,0 +1,25 @@
+*gh.txt*	Vim plugin for GitHub issue integration
+
+==============================================================================
+CONTENTS								*gh-contents*
+
+1. Commands.....................................................*gh-commands*
+2. Mappings.....................................................*gh-mappings*
+
+==============================================================================
+COMMANDS							*gh-commands*
+
+:call gh#SendBufferToGH()
+		Creates a GitHub issue from the current buffer.
+
+:call gh#ListAndOpenGitHubIssues()
+		Lists open GitHub issues in a new buffer.
+
+==============================================================================
+MAPPINGS							*gh-mappings*
+
+<Leader>ghi
+		Calls gh#SendBufferToGH() to create an issue.
+
+<Leader>ghl
+		Calls gh#ListAndOpenGitHubIssues() to list issues.
