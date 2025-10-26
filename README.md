@@ -18,7 +18,22 @@ Plug 'path/to/your/dotfiles/tools/gh-issue-creator'
 
 ## Usage
 
-- `:call gh#SendBufferToGH()` - Create an issue from the current buffer.
-- `:call gh#ListAndOpenGitHubIssues()` - List open issues.
-- `<leader>ghi` - Shortcut to create an issue.
-- `<leader>ghl` - Shortcut to list issues.
+Add the following YAML front matter
+Sample of giving a ``todo`` label and assigning it to yourself.
+
+```yaml
+---title: "Todo: [short description]" title: "Todo: [short description]
+title: "Todo: [short description]"
+label: todo
+assignee: @me
+milestone: ``yaml
+--- title: "Todo: [short description
+````
+
+### command & key bindings
+
+- `:call gh#SendBufferToGH()` - creates a Github issue from the current buffer.
+- `:call gh#ListAndOpenGitHubIssues()` - lists open Github issues.
+- `<leader>ghi` - shortcut for creating a Github issue.
+- `<leader>ghl` - shortcut to list Github issues.
+
